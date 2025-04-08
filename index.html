@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Brain Trainer - Math Skills Game</title>
+    <meta
+      name="description"
+      content="Train your brain and improve your math skills with this fast-paced game."
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Favicon -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>"
+    />
+  </head>
+  <body>
+    <div class="app-container">
+      <!-- Welcome Screen -->
+      <div id="welcome-screen" class="screen active">
+        <div class="content-box">
+          <h1>🧠 Brain Trainer</h1>
+          <p class="tagline">Train your brain with quick mental challenges!</p>
+          <div class="instructions">
+            <h2>How to Play:</h2>
+            <ul>
+              <li>Solve math problems as fast as you can</li>
+              <li>Type your answer and press Enter</li>
+              <li>Earn points for each correct answer</li>
+              <li>Get bonus points for faster answers</li>
+              <li>Level up to face harder challenges</li>
+              <li>Each level gives you bonus time</li>
+            </ul>
+
+            <div class="keyboard-shortcuts">
+              <h3>Keyboard Shortcuts:</h3>
+              <ul>
+                <li>
+                  <span class="key">Number Keys</span> - Type answers directly
+                </li>
+                <li><span class="key">Enter</span> - Submit answer</li>
+                <li><span class="key">Esc</span> - Pause/Resume game</li>
+                <li><span class="key">Space</span> - Pause/Resume game</li>
+              </ul>
+            </div>
+          </div>
+          <div class="difficulty-selector">
+            <h3>Select Difficulty:</h3>
+            <div class="difficulty-buttons">
+              <button class="btn difficulty-btn active" data-difficulty="easy">
+                Easy
+              </button>
+              <button class="btn difficulty-btn" data-difficulty="medium">
+                Medium
+              </button>
+              <button class="btn difficulty-btn" data-difficulty="hard">
+                Hard
+              </button>
+            </div>
+          </div>
+
+          <div class="challenge-button-container">
+            <button id="challenge-btn" class="btn primary-btn challenge-btn">
+              Challenge Mode
+            </button>
+          </div>
+
+          <div id="stats-container" class="stats-container">
+            <h3>Your Stats:</h3>
+            <div class="stats-grid">
+              <!-- Stats will be populated by JavaScript -->
+            </div>
+          </div>
+
+          <button id="start-btn" class="btn primary-btn">Start Game</button>
+        </div>
+      </div>
+
+      <!-- Game Screen -->
+      <div id="game-screen" class="screen">
+        <div class="content-box">
+          <div class="game-header">
+            <div class="score-container">
+              <div class="score-label">Score</div>
+              <div id="score">0</div>
+            </div>
+            <div class="timer-container">
+              <div class="timer-label">Time</div>
+              <div id="timer">60</div>
+            </div>
+            <button id="pause-btn" class="btn pause-btn">⏸️ Pause</button>
+          </div>
+
+          <div class="question-container">
+            <div id="problem" class="problem">8 + 5 = ?</div>
+            <div class="answer-container">
+              <input
+                type="number"
+                id="answer-input"
+                placeholder="Type answer..."
+                autofocus
+              />
+              <button id="submit-btn" class="btn primary-btn">Submit</button>
+            </div>
+          </div>
+
+          <div id="feedback" class="feedback"></div>
+
+          <div class="progress-container">
+            <div class="progress-label">Level Progress</div>
+            <div class="progress-bar">
+              <div id="progress-fill"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pause Overlay -->
+        <div id="pause-overlay" class="pause-overlay">
+          <div class="pause-message">
+            <h2>Game Paused</h2>
+            <p>Take a breath, then continue when you're ready!</p>
+            <button id="resume-btn" class="resume-btn">▶️ Resume</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results Screen -->
+      <div id="results-screen" class="screen">
+        <div class="content-box">
+          <h1>Game Over!</h1>
+          <div class="results">
+            <div class="result-item">
+              <div class="result-label">Final Score</div>
+              <div id="final-score" class="result-value">0</div>
+            </div>
+            <div class="result-item">
+              <div class="result-label">Correct Answers</div>
+              <div id="correct-answers" class="result-value">0</div>
+            </div>
+            <div class="result-item">
+              <div class="result-label">High Score</div>
+              <div id="high-score" class="result-value">0</div>
+            </div>
+          </div>
+
+          <div class="performance-message" id="performance-message">
+            Great job!
+          </div>
+
+          <div class="action-buttons">
+            <button id="play-again-btn" class="btn primary-btn">
+              Play Again
+            </button>
+            <button id="home-btn" class="btn secondary-btn">Home</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="challenge-screen" class="screen">
+        <div class="content-box">
+          <h1>Challenge Mode</h1>
+          <p class="tagline">Test your skills with special challenges!</p>
+
+          <div class="challenges-container">
+            <div class="challenge-card" data-challenge="timeAttack">
+              <div class="challenge-header">
+                <h3>Time Attack</h3>
+                <div class="challenge-badge">🕒</div>
+              </div>
+              <p>Solve 20 questions as quickly as possible. Clock counts up!</p>
+              <div class="challenge-stats">
+                <div class="challenge-stat">
+                  <span class="challenge-stat-label">Best Time:</span>
+                  <span class="challenge-stat-value" id="time-attack-best"
+                    >--:--</span
+                  >
+                </div>
+                <div class="challenge-stat">
+                  <span class="challenge-stat-label">Last Score:</span>
+                  <span class="challenge-stat-value" id="time-attack-last"
+                    >--:--</span
+                  >
+                </div>
+              </div>
+              <button
+                class="btn primary-btn start-challenge-btn"
+                data-challenge="timeAttack"
+              >
+                Start
+              </button>
+            </div>
+
+            <!-- Placeholder for future challenges -->
+            <div class="challenge-card coming-soon">
+              <div class="challenge-header">
+                <h3>Precision Challenge</h3>
+                <div class="challenge-badge">🎯</div>
+              </div>
+              <p>One mistake and it's game over! How far can you go?</p>
+              <div class="challenge-stats">
+                <div class="challenge-stat">
+                  <span class="challenge-stat-label">Coming Soon</span>
+                </div>
+              </div>
+              <button class="btn secondary-btn" disabled>Coming Soon</button>
+            </div>
+
+            <div class="challenge-card coming-soon">
+              <div class="challenge-header">
+                <h3>Endurance Test</h3>
+                <div class="challenge-badge">🔄</div>
+              </div>
+              <p>How many correct answers can you get in a row?</p>
+              <div class="challenge-stats">
+                <div class="challenge-stat">
+                  <span class="challenge-stat-label">Coming Soon</span>
+                </div>
+              </div>
+              <button class="btn secondary-btn" disabled>Coming Soon</button>
+            </div>
+          </div>
+
+          <button id="challenge-back-btn" class="btn secondary-btn back-btn">
+            Back to Main Menu
+          </button>
+        </div>
+      </div>
+
+      <!-- Add this for explanation of challenge -->
+      <div class="challenge-explanation">
+        <h2>How Challenge Mode Works:</h2>
+        <div class="explanation-content">
+          <div class="explanation-section">
+            <h3>Time Attack Challenge</h3>
+            <p>
+              In Time Attack mode, you'll answer 20 math questions as quickly as
+              possible:
+            </p>
+            <ul>
+              <li>
+                Unlike regular mode, the timer counts
+                <strong>up</strong> instead of down
+              </li>
+              <li>
+                Your goal is to complete all questions in the shortest possible
+                time
+              </li>
+              <li>Your best time is saved and displayed for future attempts</li>
+              <li>Perfect accuracy is required to set a new record</li>
+            </ul>
+          </div>
+
+          <div class="explanation-section">
+            <h3>Tips for Success</h3>
+            <ul>
+              <li>Practice in regular mode first to improve your skills</li>
+              <li>Focus on accuracy - wrong answers don't improve your time</li>
+              <li>Use keyboard shortcuts for faster input</li>
+              <li>Try to beat your previous best time</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Challenge game screen (uses the same layout as regular game but with different UI elements) -->
+      <div id="challenge-game-screen" class="screen">
+        <div class="content-box">
+          <div class="game-header">
+            <div class="challenge-type-container">
+              <div class="challenge-type-label">Challenge</div>
+              <div id="challenge-type">Time Attack</div>
+            </div>
+            <div class="timer-container challenge-timer">
+              <div class="timer-label">Time</div>
+              <div id="challenge-timer">00:00</div>
+            </div>
+            <div class="progress-count-container">
+              <div class="progress-count-label">Progress</div>
+              <div id="question-counter">0/20</div>
+            </div>
+            <button id="challenge-pause-btn" class="btn pause-btn">
+              ⏸️ Pause
+            </button>
+          </div>
+
+          <div class="question-container">
+            <div id="challenge-problem" class="problem">8 + 5 = ?</div>
+            <div class="answer-container">
+              <input
+                type="number"
+                id="challenge-answer-input"
+                placeholder="Type answer..."
+                autofocus
+              />
+              <button id="challenge-submit-btn" class="btn primary-btn">
+                Submit
+              </button>
+            </div>
+          </div>
+
+          <div id="challenge-feedback" class="feedback"></div>
+
+          <div class="progress-container">
+            <div class="progress-label">Question Progress</div>
+            <div class="progress-bar">
+              <div id="challenge-progress-fill"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Challenge Pause Overlay -->
+        <div id="challenge-pause-overlay" class="pause-overlay">
+          <div class="pause-message">
+            <h2>Challenge Paused</h2>
+            <p>Take a breath, then continue when you're ready!</p>
+            <button id="challenge-resume-btn" class="resume-btn">
+              ▶️ Resume
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Challenge Results Screen -->
+      <div id="challenge-results-screen" class="screen">
+        <div class="content-box">
+          <h1>Challenge Complete!</h1>
+
+          <div class="challenge-results-container">
+            <div class="challenge-result-header">
+              <div id="challenge-result-icon" class="challenge-result-icon">
+                🕒
+              </div>
+              <div id="challenge-result-title" class="challenge-result-title">
+                Time Attack
+              </div>
+            </div>
+
+            <div class="results challenge-results">
+              <div class="result-item">
+                <div class="result-label">Your Time</div>
+                <div id="challenge-final-time" class="result-value">00:00</div>
+              </div>
+              <div class="result-item">
+                <div class="result-label">Correct Answers</div>
+                <div id="challenge-correct-answers" class="result-value">
+                  0/20
+                </div>
+              </div>
+              <div class="result-item">
+                <div class="result-label">Best Time</div>
+                <div id="challenge-best-time" class="result-value">00:00</div>
+              </div>
+            </div>
+
+            <div class="performance-message" id="challenge-performance-message">
+              Great job completing the challenge!
+            </div>
+
+            <div class="action-buttons">
+              <button id="retry-challenge-btn" class="btn primary-btn">
+                Try Again
+              </button>
+              <button id="challenge-home-btn" class="btn secondary-btn">
+                More Challenges
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
