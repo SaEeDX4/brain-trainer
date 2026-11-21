@@ -1,3 +1,7 @@
+# Original project development summary
+
+Preserved verbatim below from the original `SUMMARY.txt`.
+
 # Brain Trainer – Summary of Project Development
 
 I created this project to build a fun, interactive game that improves focus, speed, and mental calculation skills. My goal was not only to create a working game, but to make it beautiful and user-friendly.
