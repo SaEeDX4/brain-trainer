@@ -115,10 +115,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Add keyboard shortcuts for easier gameplay
   document.addEventListener("keydown", function (event) {
-    // If game is not active or is paused, ignore keyboard shortcuts
-    if (!gameScreen.classList.contains("active") || gameState.isPaused) {
-      return;
-    }
+    if (!gameScreen.classList.contains("active")) return;
+    // Pause/resume must remain available while paused.
+    if (gameState.isPaused && event.key !== "Escape" && event.code !== "Space") return;
 
     // Number keys 0-9 for quick input (both regular and numpad)
     const keyCode = event.keyCode;
@@ -145,7 +144,8 @@ document.addEventListener("DOMContentLoaded", function () {
       event.code === "Space" &&
       document.activeElement !== answerInput &&
       document.activeElement !== submitBtn &&
-      document.activeElement !== resumeBtn
+      document.activeElement !== resumeBtn &&
+      document.activeElement !== pauseBtn
     ) {
       event.preventDefault(); // Prevent page scroll on space
       if (gameState.isPaused) {
@@ -232,6 +232,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // Update UI
     scoreDisplay.textContent = gameState.score;
     timerDisplay.textContent = gameState.timeLeft;
+    timerDisplay.style.color = "";
+    performanceMessage.classList.remove("celebrate");
     progressFill.style.width = "0%";
     feedbackDisplay.className = "feedback";
     feedbackDisplay.textContent = "";
@@ -265,10 +267,10 @@ document.addEventListener("DOMContentLoaded", function () {
         // Start timer
         startTimer();
 
-        // Clear feedback after short delay
-        setTimeout(() => {
-          feedbackDisplay.style.opacity = "0";
-        }, 1500);
+        // Clear the countdown message before accepting answers.
+        feedbackDisplay.textContent = "";
+        feedbackDisplay.style.opacity = "";
+        if (!gameState.isPaused) answerInput.focus();
       }
     }, 1000);
 
@@ -277,9 +279,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Focus on input
     answerInput.value = "";
-    setTimeout(() => {
-      answerInput.focus();
-    }, 3100); // Focus after countdown completes
+    // Focus is set when the countdown actually completes.
   }
 
   // Generate a new math question based on difficulty
@@ -365,7 +365,6 @@ document.addEventListener("DOMContentLoaded", function () {
     // Update game state and UI
     gameState.currentAnswer = answer;
     problemDisplay.textContent = questionText;
-    gameState.totalQuestions++;
     gameState.isAnswerReady = true;
   }
 
@@ -375,7 +374,9 @@ document.addEventListener("DOMContentLoaded", function () {
         gameState.isPaused || !gameState.isAnswerReady ||
         answerInput.value.trim() === "") return;
     gameState.isAnswerReady = false;
-    const playerAnswer = parseFloat(answerInput.value);
+    const playerAnswer = Number(answerInput.value);
+    gameState.totalQuestions++;
+    feedbackDisplay.style.opacity = "";
 
     // Special handling for division to account for floating point precision
     let isCorrect = false;
