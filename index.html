@@ -8,7 +8,7 @@
       name="description"
       content="Train your brain and improve your math skills with this fast-paced game."
     />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="assets/css/styles.css" />
     <link
       href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"
       rel="stylesheet"
@@ -102,14 +102,15 @@
               <input
                 type="number"
                 id="answer-input"
+                inputmode="decimal"
+                aria-label="Answer to the math problem"
                 placeholder="Type answer..."
-                autofocus
               />
               <button id="submit-btn" class="btn primary-btn">Submit</button>
             </div>
           </div>
 
-          <div id="feedback" class="feedback"></div>
+          <div id="feedback" class="feedback" role="status" aria-live="polite"></div>
 
           <div class="progress-container">
             <div class="progress-label">Level Progress</div>
@@ -232,7 +233,7 @@
       </div>
 
       <!-- Add this for explanation of challenge -->
-      <div class="challenge-explanation">
+      <div id="challenge-explanation" class="challenge-explanation screen">
         <h2>How Challenge Mode Works:</h2>
         <div class="explanation-content">
           <div class="explanation-section">
@@ -294,8 +295,9 @@
               <input
                 type="number"
                 id="challenge-answer-input"
+                inputmode="decimal"
+                aria-label="Answer to the challenge problem"
                 placeholder="Type answer..."
-                autofocus
               />
               <button id="challenge-submit-btn" class="btn primary-btn">
                 Submit
@@ -303,7 +305,7 @@
             </div>
           </div>
 
-          <div id="challenge-feedback" class="feedback"></div>
+          <div id="challenge-feedback" class="feedback" role="status" aria-live="polite"></div>
 
           <div class="progress-container">
             <div class="progress-label">Question Progress</div>
@@ -374,6 +376,6 @@
       </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="assets/js/script.js"></script>
   </body>
 </html>

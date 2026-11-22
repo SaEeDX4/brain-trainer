@@ -40,22 +40,29 @@ document.addEventListener("DOMContentLoaded", function () {
     questionsSinceLastLevel: 0,
     soundEnabled: true,
     isPaused: false,
+    isAnswerReady: false,
     keyboardInput: false,
   };
 
-  // Sound Effects - Using the Web Audio API for simple tones instead of audio files
-  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  // Guard delayed actions from earlier rounds.
+  let gameSession = 0;
+  let challengeSession = 0;
+  let countdownTimer = null;
 
-  // Initialize audio context when user interacts with the page
-  document.addEventListener(
-    "click",
-    () => {
+  // Initialize optional audio only following a user gesture.
+  const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+  let audioContext = null;
+  document.addEventListener("click", () => {
+    if (!AudioContextConstructor) return;
+    try {
+      if (!audioContext) audioContext = new AudioContextConstructor();
       if (audioContext.state === "suspended") {
-        audioContext.resume();
+        void audioContext.resume().catch(() => {});
       }
-    },
-    { once: true }
-  );
+    } catch (error) {
+      console.warn("Audio is unavailable:", error);
+    }
+  });
 
   // Difficulty Settings
   const difficultySettings = {
@@ -108,10 +115,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Add keyboard shortcuts for easier gameplay
   document.addEventListener("keydown", function (event) {
-    // If game is not active or is paused, ignore keyboard shortcuts
-    if (!gameScreen.classList.contains("active") || gameState.isPaused) {
-      return;
-    }
+    if (!gameScreen.classList.contains("active")) return;
+    // Pause/resume must remain available while paused.
+    if (gameState.isPaused && event.key !== "Escape" && event.code !== "Space") return;
 
     // Number keys 0-9 for quick input (both regular and numpad)
     const keyCode = event.keyCode;
@@ -138,7 +144,8 @@ document.addEventListener("DOMContentLoaded", function () {
       event.code === "Space" &&
       document.activeElement !== answerInput &&
       document.activeElement !== submitBtn &&
-      document.activeElement !== resumeBtn
+      document.activeElement !== resumeBtn &&
+      document.activeElement !== pauseBtn
     ) {
       event.preventDefault(); // Prevent page scroll on space
       if (gameState.isPaused) {
@@ -193,6 +200,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Start the game
   function startGame() {
+    gameSession++;
+    const session = gameSession;
+    clearInterval(countdownTimer);
+    clearInterval(gameState.timer);
     // Reset game state
     gameState = {
       score: 0,
@@ -207,15 +218,22 @@ document.addEventListener("DOMContentLoaded", function () {
       questionsSinceLastLevel: 0,
       soundEnabled: gameState.soundEnabled,
       isPaused: false,
+      isAnswerReady: false,
       keyboardInput: false,
     };
 
-    // Reset pause overlay if it was active
+    // Restore controls in case the previous round was paused.
     pauseOverlay.classList.remove("active");
+    answerInput.disabled = false;
+    submitBtn.disabled = false;
+    pauseBtn.classList.remove("active");
+    pauseBtn.textContent = "⏸️ Pause";
 
     // Update UI
     scoreDisplay.textContent = gameState.score;
     timerDisplay.textContent = gameState.timeLeft;
+    timerDisplay.style.color = "";
+    performanceMessage.classList.remove("celebrate");
     progressFill.style.width = "0%";
     feedbackDisplay.className = "feedback";
     feedbackDisplay.textContent = "";
@@ -229,13 +247,19 @@ document.addEventListener("DOMContentLoaded", function () {
     let countdown = 3;
     problemDisplay.textContent = countdown;
 
-    const countdownInterval = setInterval(() => {
+    countdownTimer = setInterval(() => {
+      if (session !== gameSession || !gameScreen.classList.contains("active")) {
+        clearInterval(countdownTimer);
+        return;
+      }
+      if (gameState.isPaused) return;
       countdown--;
 
       if (countdown > 0) {
         problemDisplay.textContent = countdown;
       } else {
-        clearInterval(countdownInterval);
+        clearInterval(countdownTimer);
+        countdownTimer = null;
 
         // Generate first question
         generateQuestion();
@@ -243,10 +267,10 @@ document.addEventListener("DOMContentLoaded", function () {
         // Start timer
         startTimer();
 
-        // Clear feedback after short delay
-        setTimeout(() => {
-          feedbackDisplay.style.opacity = "0";
-        }, 1500);
+        // Clear the countdown message before accepting answers.
+        feedbackDisplay.textContent = "";
+        feedbackDisplay.style.opacity = "";
+        if (!gameState.isPaused) answerInput.focus();
       }
     }, 1000);
 
@@ -255,9 +279,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Focus on input
     answerInput.value = "";
-    setTimeout(() => {
-      answerInput.focus();
-    }, 3100); // Focus after countdown completes
+    // Focus is set when the countdown actually completes.
   }
 
   // Generate a new math question based on difficulty
@@ -343,16 +365,18 @@ document.addEventListener("DOMContentLoaded", function () {
     // Update game state and UI
     gameState.currentAnswer = answer;
     problemDisplay.textContent = questionText;
-    gameState.totalQuestions++;
+    gameState.isAnswerReady = true;
   }
 
   // Check the player's answer
   function checkAnswer() {
-    if (answerInput.value.trim() === "") {
-      return; // If input is empty, do nothing
-    }
-
-    const playerAnswer = parseFloat(answerInput.value);
+    if (!gameScreen.classList.contains("active") ||
+        gameState.isPaused || !gameState.isAnswerReady ||
+        answerInput.value.trim() === "") return;
+    gameState.isAnswerReady = false;
+    const playerAnswer = Number(answerInput.value);
+    gameState.totalQuestions++;
+    feedbackDisplay.style.opacity = "";
 
     // Special handling for division to account for floating point precision
     let isCorrect = false;
@@ -419,8 +443,10 @@ document.addEventListener("DOMContentLoaded", function () {
     answerInput.value = "";
     answerInput.focus();
 
-    // Generate a new question
+    // Ignore delayed callbacks belonging to a previous game session.
+    const session = gameSession;
     setTimeout(() => {
+      if (session !== gameSession || !gameScreen.classList.contains("active")) return;
       generateQuestion();
       feedbackDisplay.className = "feedback";
     }, 1000);
@@ -505,8 +531,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // End the game
   function endGame() {
-    // Clear timer
+    gameSession++;
+    gameState.isAnswerReady = false;
     clearInterval(gameState.timer);
+    clearInterval(countdownTimer);
+    countdownTimer = null;
 
     // Play game over sound
     playSound("gameOver");
@@ -642,6 +671,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Go back to home/welcome screen
   function goToHome() {
+    gameSession++;
+    challengeSession++;
+    clearInterval(countdownTimer);
+    countdownTimer = null;
+    gameState.isAnswerReady = false;
+    if (challengeState?.timer) clearInterval(challengeState.timer);
+    answerInput.disabled = false;
+    submitBtn.disabled = false;
     // Clear any existing game state
     if (gameState.timer) {
       clearInterval(gameState.timer);
@@ -821,6 +858,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Helper function to play a tone
   function playTone(frequency, duration, type = "sine") {
+    if (!audioContext) return;
     try {
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
@@ -846,13 +884,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Helper function to switch screens
   function showScreen(screen) {
-    // Hide all screens
-    welcomeScreen.classList.remove("active");
-    gameScreen.classList.remove("active");
-    resultsScreen.classList.remove("active");
-
-    // Show the requested screen
+    // Keep exactly one game screen active; show challenge guidance only in menu.
+    document.querySelectorAll(".screen.active").forEach((element) => {
+      element.classList.remove("active");
+    });
     screen.classList.add("active");
+    if (screen.id === "challenge-screen") {
+      document.getElementById("challenge-explanation").classList.add("active");
+    }
   }
 
   // Initialize the game when page loads
@@ -913,6 +952,7 @@ document.addEventListener("DOMContentLoaded", function () {
     elapsedTime: 0, // Total time taken
     timer: null, // Timer interval
     currentAnswer: null, // Current correct answer
+    isAnswerReady: false, // Guard duplicate submits
     isPaused: false, // Is the challenge paused
     operations: ["+", "-", "*"], // Default operations for challenges
   };
@@ -965,6 +1005,17 @@ document.addEventListener("DOMContentLoaded", function () {
     challengeHomeBtn.addEventListener("click", showChallengeScreen);
   }
 
+  // Escape / Space pause and resume Time Attack too.
+  document.addEventListener("keydown", (event) => {
+    if (!challengeGameScreen.classList.contains("active")) return;
+    if (event.key !== "Escape" && event.code !== "Space") return;
+    if (event.code === "Space" &&
+        [challengeAnswerInput, challengeSubmitBtn, challengeResumeBtn].includes(document.activeElement)) return;
+    event.preventDefault();
+    if (challengeState.isPaused) resumeChallenge();
+    else pauseChallenge();
+  });
+
   // Show the challenge selection screen
   function showChallengeScreen() {
     loadChallengeStats();
@@ -973,6 +1024,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Start a challenge
   function startChallenge(type) {
+    challengeSession++;
+    clearInterval(challengeState.timer);
+    challengePauseOverlay.classList.remove("active");
+    challengeAnswerInput.disabled = false;
+    challengeSubmitBtn.disabled = false;
+    challengePauseBtn.classList.remove("active");
+    challengePauseBtn.textContent = "⏸️ Pause";
     // Reset challenge state
     challengeState = {
       type: type,
@@ -983,6 +1041,7 @@ document.addEventListener("DOMContentLoaded", function () {
       elapsedTime: 0,
       timer: null,
       currentAnswer: null,
+      isAnswerReady: false,
       isPaused: false,
       operations: ["+", "-", "*"], // Default operations for challenges
     };
@@ -1055,16 +1114,17 @@ document.addEventListener("DOMContentLoaded", function () {
     challengeState.currentAnswer = answer;
     challengeProblem.textContent = questionText;
     challengeState.currentQuestion++;
+    challengeState.isAnswerReady = true;
     updateQuestionCounter();
   }
 
   // Check the player's answer in challenge mode
   function checkChallengeAnswer() {
-    if (challengeAnswerInput.value.trim() === "") {
-      return; // If input is empty, do nothing
-    }
-
-    const playerAnswer = parseInt(challengeAnswerInput.value);
+    if (!challengeGameScreen.classList.contains("active") ||
+        challengeState.isPaused || !challengeState.isAnswerReady ||
+        challengeAnswerInput.value.trim() === "") return;
+    challengeState.isAnswerReady = false;
+    const playerAnswer = Number(challengeAnswerInput.value);
 
     // Check if the answer is correct
     const isCorrect = playerAnswer === challengeState.currentAnswer;
@@ -1105,8 +1165,11 @@ document.addEventListener("DOMContentLoaded", function () {
     if (challengeState.currentQuestion >= challengeState.totalQuestions) {
       endChallenge();
     } else {
-      // Generate a new question after a short delay
+      // A callback from an earlier Time Attack must not modify this round.
+      const session = challengeSession;
       setTimeout(() => {
+        if (session !== challengeSession ||
+            !challengeGameScreen.classList.contains("active")) return;
         generateChallengeQuestion();
         challengeFeedback.className = "feedback";
       }, 1000);
@@ -1206,6 +1269,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // End the challenge
   function endChallenge() {
+    challengeSession++;
+    challengeState.isAnswerReady = false;
     // Stop the timer
     clearInterval(challengeState.timer);
 
